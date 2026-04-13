@@ -1,15 +1,33 @@
 # AppCurfew
 
-AppCurfew is an Android bedtime blocker that lets you pick specific apps to restrict during a scheduled time window. It uses an Accessibility Service to detect the foreground app and immediately sends the user back home when a blocked app is opened during the active schedule.
+AppCurfew is an Android app designed to help you regain control over your screen time by enforcing strict app usage boundaries during specific time periods.
+
+## The Problem
+
+Many of us intend to stop using distracting apps at night or during work hours, but end up scrolling anyway. Apps like YouTube, Instagram, and others are designed to keep us engaged, making self-control difficult—especially late at night.
+
+Even when users set limits, they are easy to bypass.
+
+## The Solution
+
+AppCurfew enforces discipline by blocking selected apps during scheduled time windows. When a blocked app is opened, the user is immediately redirected back to the home screen, preventing usage.
+
+This creates a friction layer between intention and distraction.
+
+> Built for people who want control over their time when willpower is not enough.
 
 ## Features
 
-- Block selected apps during a bedtime window
+- Enforce app blocking during custom time windows
+- Prevent access to distracting apps (e.g. YouTube, social media)
 - Support overnight schedules such as `22:00` to `06:00`
-- Always allow dialer and contacts
-- Save settings locally with SharedPreferences
-- Search installed apps before selecting which ones to block
-- Prompt the user to enable the accessibility service when needed
+- Always allow essential apps like dialer and contacts
+- Simple app selection with search support
+- Lightweight and fully on-device (no data collection)
+
+## Why This Exists
+
+This project started as a personal attempt to reduce late-night screen time and regain focus during important hours.
 
 ## Project Setup
 
