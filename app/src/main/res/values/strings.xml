@@ -24,4 +24,16 @@
     <string name="end_time_label">End time</string>
     <string name="am">AM</string>
     <string name="pm">PM</string>
+
+    <!-- New Protection Strings -->
+    <string name="disable_protection_title">Disable Blocking?</string>
+    <string name="disable_protection_message">Blocking is active. Are you sure you want to disable your discipline?</string>
+    <string name="enter_pin_hint">Enter PIN</string>
+    <string name="confirm_disable">I choose to disable my discipline</string>
+    <string name="cancel">Cancel</string>
+    <string name="setup_pin_title">Setup Security PIN</string>
+    <string name="setup_pin_message">Create a PIN to protect your settings during bedtime.</string>
+    <string name="wrong_pin">Incorrect PIN. Try again.</string>
+    <string name="wait_seconds">Wait %d seconds…</string>
+    <string name="override_active_msg">Blocking temporarily disabled for 10 minutes.</string>
 </resources>

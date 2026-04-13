@@ -6,20 +6,28 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.PackageManager.NameNotFoundException
 import android.graphics.drawable.Drawable
-import android.provider.Settings
 import android.os.Bundle
+import android.os.CountDownTimer
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 
 class MainActivity : AppCompatActivity() {
 
@@ -32,7 +40,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var whitelistSummary: TextView
     private lateinit var blockedAppsGroup: ChipGroup
     private lateinit var blockedAppsEmpty: TextView
+    
     private var accessibilityPromptShown = false
+    private val handler = Handler(Looper.getMainLooper())
+    private val refreshRunnable = object : Runnable {
+        override fun run() {
+            updateUIState()
+            handler.postDelayed(this, 5000)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,43 +65,8 @@ class MainActivity : AppCompatActivity() {
         blockedAppsGroup = findViewById(R.id.blockedAppsGroup)
         blockedAppsEmpty = findViewById(R.id.blockedAppsEmpty)
 
-        enableSwitch.isChecked = prefs.isBlockingEnabled()
-        startTimeButton.text = formatMinutes(prefs.getStartMinutes())
-        endTimeButton.text = formatMinutes(prefs.getEndMinutes())
-        updateSummary()
-        renderBlockedApps()
-
-        enableSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.setBlockingEnabled(isChecked)
-            updateSummary()
-        }
-
-        startTimeButton.setOnClickListener {
-            pickTime(prefs.getStartMinutes()) {
-                prefs.setStartMinutes(it)
-                startTimeButton.text = formatMinutes(it)
-                updateSummary()
-                renderBlockedApps()
-            }
-        }
-
-        endTimeButton.setOnClickListener {
-            pickTime(prefs.getEndMinutes()) {
-                prefs.setEndMinutes(it)
-                endTimeButton.text = formatMinutes(it)
-                updateSummary()
-                renderBlockedApps()
-            }
-        }
-
-        selectAppsButton.setOnClickListener {
-            startActivity(Intent(this, AppSelectionActivity::class.java))
-        }
-
-        accessibilityButton.setOnClickListener {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-            Toast.makeText(this, R.string.accessibility_help, Toast.LENGTH_LONG).show()
-        }
+        setupListeners()
+        updateUIState()
 
         val basePadding = (24 * resources.displayMetrics.density).toInt()
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
@@ -100,29 +81,182 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupListeners() {
+        enableSwitch.setOnClickListener {
+            val isCurrentlyEnabled = prefs.isBlockingEnabled()
+            val isBedtime = prefs.isWithinActiveWindow()
+
+            if (isCurrentlyEnabled && isBedtime) {
+                // Intercept disabling during bedtime
+                enableSwitch.isChecked = true
+                showDisableProtectionDialog()
+            } else {
+                val newState = !isCurrentlyEnabled
+                if (newState && prefs.getPinCode() == null) {
+                    showSetupPinDialog {
+                        prefs.setBlockingEnabled(true)
+                        updateUIState()
+                    }
+                } else {
+                    prefs.setBlockingEnabled(newState)
+                    updateUIState()
+                }
+            }
+        }
+
+        startTimeButton.setOnClickListener {
+            pickTime(prefs.getStartMinutes()) {
+                prefs.setStartMinutes(it)
+                updateUIState()
+            }
+        }
+
+        endTimeButton.setOnClickListener {
+            pickTime(prefs.getEndMinutes()) {
+                prefs.setEndMinutes(it)
+                updateUIState()
+            }
+        }
+
+        selectAppsButton.setOnClickListener {
+            startActivity(Intent(this, AppSelectionActivity::class.java))
+        }
+
+        accessibilityButton.setOnClickListener {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            Toast.makeText(this, R.string.accessibility_help, Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
-        enableSwitch.isChecked = prefs.isBlockingEnabled()
+        updateUIState()
+        showAccessibilityPromptIfNeeded()
+        handler.post(refreshRunnable)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        handler.removeCallbacks(refreshRunnable)
+    }
+
+    private fun updateUIState() {
+        val isEnabled = prefs.isBlockingEnabled()
+        enableSwitch.isChecked = isEnabled
         startTimeButton.text = formatMinutes(prefs.getStartMinutes())
         endTimeButton.text = formatMinutes(prefs.getEndMinutes())
-        updateSummary()
-        renderBlockedApps()
-        updateAccessibilityButtonVisibility()
-        showAccessibilityPromptIfNeeded()
-    }
-
-    private fun updateAccessibilityButtonVisibility() {
-        val isEnabled = isAccessibilityServiceEnabled()
-        accessibilityButton.visibility = if (isEnabled) View.GONE else View.VISIBLE
-    }
-
-    private fun updateSummary() {
+        
         val blockedCount = prefs.getBlockedPackages().size
         whitelistSummary.text = getString(
             R.string.whitelist_summary,
             blockedCount,
-            if (prefs.isBlockingEnabled()) getString(R.string.enabled) else getString(R.string.disabled)
+            if (isEnabled) getString(R.string.enabled) else getString(R.string.disabled)
         )
+
+        renderBlockedApps()
+        updateAccessibilityButtonVisibility()
+    }
+
+    private fun showSetupPinDialog(onComplete: () -> Unit) {
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_disable_protection, null)
+        val title = view.findViewById<TextView>(R.id.textProtectionTitle)
+        val message = view.findViewById<TextView>(R.id.textProtectionMessage)
+        val pinInput = view.findViewById<TextInputEditText>(R.id.editPin)
+        val confirmBtn = view.findViewById<Button>(R.id.buttonConfirmDisable)
+        val cancelBtn = view.findViewById<Button>(R.id.buttonCancelDisable)
+
+        title.text = getString(R.string.setup_pin_title)
+        message.text = getString(R.string.setup_pin_message)
+        confirmBtn.text = getString(R.string.save)
+        confirmBtn.isEnabled = false
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(view)
+            .setCancelable(false)
+            .show()
+
+        pinInput.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                confirmBtn.isEnabled = s?.length == 4
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+        })
+
+        confirmBtn.setOnClickListener {
+            prefs.setPinCode(pinInput.text.toString())
+            dialog.dismiss()
+            onComplete()
+        }
+
+        cancelBtn.setOnClickListener { 
+            enableSwitch.isChecked = false
+            dialog.dismiss() 
+        }
+    }
+
+    private fun showDisableProtectionDialog() {
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_disable_protection, null)
+        val pinInput = view.findViewById<TextInputEditText>(R.id.editPin)
+        val pinLayout = view.findViewById<TextInputLayout>(R.id.pinInputLayout)
+        val countdownText = view.findViewById<TextView>(R.id.textCountdown)
+        val confirmBtn = view.findViewById<Button>(R.id.buttonConfirmDisable)
+        val cancelBtn = view.findViewById<Button>(R.id.buttonCancelDisable)
+
+        confirmBtn.text = getString(R.string.save) // Initial state: "Verify" or "Save"
+        confirmBtn.isEnabled = false
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(view)
+            .setCancelable(false)
+            .show()
+
+        pinInput.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                confirmBtn.isEnabled = s?.length == 4
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+        })
+
+        confirmBtn.setOnClickListener {
+            val enteredPin = pinInput.text.toString()
+            if (enteredPin == prefs.getPinCode()) {
+                // PIN correct, start friction
+                pinLayout.visibility = View.GONE
+                countdownText.visibility = View.VISIBLE
+                confirmBtn.isEnabled = false
+                
+                object : CountDownTimer(10000, 1000) {
+                    override fun onTick(millisUntilFinished: Long) {
+                        countdownText.text = getString(R.string.wait_seconds, millisUntilFinished / 1000)
+                    }
+
+                    override fun onFinish() {
+                        countdownText.visibility = View.GONE
+                        confirmBtn.isEnabled = true
+                        confirmBtn.text = getString(R.string.confirm_disable)
+                        confirmBtn.setOnClickListener {
+                            // Final Disable Logic
+                            prefs.setOverrideActive(true)
+                            prefs.setOverrideEndTime(System.currentTimeMillis() + 10 * 60 * 1000) // 10 mins
+                            prefs.setBlockingEnabled(false)
+                            updateUIState()
+                            Toast.makeText(this@MainActivity, R.string.override_active_msg, Toast.LENGTH_LONG).show()
+                            dialog.dismiss()
+                        }
+                    }
+                }.start()
+            } else {
+                pinLayout.error = getString(R.string.wrong_pin)
+            }
+        }
+
+        cancelBtn.setOnClickListener { dialog.dismiss() }
+    }
+
+    private fun updateAccessibilityButtonVisibility() {
+        accessibilityButton.visibility = if (isAccessibilityServiceEnabled()) View.GONE else View.VISIBLE
     }
 
     private fun pickTime(initialMinutes: Int, onSelected: (Int) -> Unit) {
@@ -189,9 +323,7 @@ class MainActivity : AppCompatActivity() {
     )
 
     private fun showAccessibilityPromptIfNeeded() {
-        if (accessibilityPromptShown || isAccessibilityServiceEnabled()) {
-            return
-        }
+        if (accessibilityPromptShown || isAccessibilityServiceEnabled()) return
 
         accessibilityPromptShown = true
         MaterialAlertDialogBuilder(this)
@@ -206,22 +338,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun isAccessibilityServiceEnabled(): Boolean {
-        val expected = ComponentName(this, AppBlockAccessibilityService::class.java)
-            .flattenToString()
-        val enabledServices = Settings.Secure.getString(
-            contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ).orEmpty()
-
-        if (enabledServices.split(':').any { it.equals(expected, ignoreCase = true) }) {
-            return true
-        }
-
-        val enabled = Settings.Secure.getInt(
-            contentResolver,
-            Settings.Secure.ACCESSIBILITY_ENABLED,
-            0
-        )
-        return enabled == 1 && enabledServices.contains(expected)
+        val expected = ComponentName(this, AppBlockAccessibilityService::class.java).flattenToString()
+        val enabledServices = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES).orEmpty()
+        return enabledServices.split(':').any { it.equals(expected, ignoreCase = true) }
     }
 }

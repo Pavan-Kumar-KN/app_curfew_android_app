@@ -19,24 +19,24 @@ class AppBlockAccessibilityService : AccessibilityService() {
             return
         }
 
-        if (!shouldBlock(packageName)) {
-            return
-        }
+        if (shouldBlock(packageName)) {
+            val now = System.currentTimeMillis()
+            if (packageName == lastBlockedPackage && now - lastBlockedAtMillis < 750) {
+                return
+            }
 
-        val now = System.currentTimeMillis()
-        if (packageName == lastBlockedPackage && now - lastBlockedAtMillis < 750) {
-            return
+            lastBlockedPackage = packageName
+            lastBlockedAtMillis = now
+            performGlobalAction(GLOBAL_ACTION_HOME)
         }
-
-        lastBlockedPackage = packageName
-        lastBlockedAtMillis = now
-        performGlobalAction(GLOBAL_ACTION_HOME)
     }
 
     override fun onInterrupt() = Unit
 
     private fun shouldBlock(packageName: String): Boolean {
-        if (!prefs.isBlockingEnabled()) {
+        // Enforce re-enabling if override expired
+        val isEnabled = prefs.isBlockingEnabled()
+        if (!isEnabled) {
             return false
         }
 
@@ -44,8 +44,14 @@ class AppBlockAccessibilityService : AccessibilityService() {
             return false
         }
 
+        // Whitelist critical apps
         if (packageName in ALLOWED_PACKAGES) {
             return false
+        }
+
+        // Hard Restrictions: Block Settings and Play Store during bedtime
+        if (packageName == "com.android.settings" || packageName == "com.android.vending") {
+            return true
         }
 
         return packageName in prefs.getBlockedPackages()

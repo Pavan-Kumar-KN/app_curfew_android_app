@@ -8,7 +8,20 @@ class BedtimePrefs(context: Context) {
 
     private val preferences: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    fun isBlockingEnabled(): Boolean = preferences.getBoolean(KEY_ENABLED, false)
+    fun isBlockingEnabled(): Boolean {
+        if (!isWithinActiveWindow()) return preferences.getBoolean(KEY_ENABLED, false)
+        
+        // If within active window, check if override is active
+        if (isOverrideActive()) {
+            if (System.currentTimeMillis() > getOverrideEndTime()) {
+                setOverrideActive(false)
+                setBlockingEnabled(true)
+                return true
+            }
+            return false
+        }
+        return preferences.getBoolean(KEY_ENABLED, false)
+    }
 
     fun setBlockingEnabled(enabled: Boolean) {
         preferences.edit().putBoolean(KEY_ENABLED, enabled).apply()
@@ -32,6 +45,24 @@ class BedtimePrefs(context: Context) {
         preferences.edit().putStringSet(KEY_BLOCKED_PACKAGES, packages).apply()
     }
 
+    fun getPinCode(): String? = preferences.getString(KEY_PIN_CODE, null)
+
+    fun setPinCode(pin: String) {
+        preferences.edit().putString(KEY_PIN_CODE, pin).apply()
+    }
+
+    fun isOverrideActive(): Boolean = preferences.getBoolean(KEY_OVERRIDE_ACTIVE, false)
+
+    fun setOverrideActive(active: Boolean) {
+        preferences.edit().putBoolean(KEY_OVERRIDE_ACTIVE, active).apply()
+    }
+
+    fun getOverrideEndTime(): Long = preferences.getLong(KEY_OVERRIDE_END_TIME, 0L)
+
+    fun setOverrideEndTime(timestamp: Long) {
+        preferences.edit().putLong(KEY_OVERRIDE_END_TIME, timestamp).apply()
+    }
+
     fun isWithinActiveWindow(currentMinutes: Int = currentMinutesOfDay()): Boolean {
         val start = getStartMinutes()
         val end = getEndMinutes()
@@ -48,6 +79,9 @@ class BedtimePrefs(context: Context) {
         private const val KEY_START_MINUTES = "start_minutes"
         private const val KEY_END_MINUTES = "end_minutes"
         private const val KEY_BLOCKED_PACKAGES = "blocked_packages"
+        private const val KEY_PIN_CODE = "pin_code"
+        private const val KEY_OVERRIDE_ACTIVE = "override_active"
+        private const val KEY_OVERRIDE_END_TIME = "override_end_time"
     }
 }
 
