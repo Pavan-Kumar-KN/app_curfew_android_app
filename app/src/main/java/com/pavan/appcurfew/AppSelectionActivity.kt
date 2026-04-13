@@ -15,7 +15,10 @@ import android.widget.ImageView
 import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.textfield.TextInputEditText
 
@@ -28,15 +31,27 @@ class AppSelectionActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContentView(R.layout.activity_app_selection)
 
         prefs = BedtimePrefs(this)
+        val rootView = findViewById<View>(R.id.rootAppSelection)
         val listView = findViewById<ListView>(R.id.listApps)
         val saveButton = findViewById<Button>(R.id.buttonSaveBlockedApps)
         val searchInput = findViewById<TextInputEditText>(R.id.searchApps)
         val selectedCount = findViewById<TextView>(R.id.textSelectedCount)
 
-        title = getString(R.string.select_apps_title)
+        val basePadding = (20 * resources.displayMetrics.density).toInt()
+        ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(
+                systemBars.left + basePadding,
+                systemBars.top + basePadding,
+                systemBars.right + basePadding,
+                systemBars.bottom + basePadding
+            )
+            insets
+        }
 
         apps.addAll(loadLaunchableApps())
         filteredApps.addAll(apps)
@@ -47,24 +62,15 @@ class AppSelectionActivity : AppCompatActivity() {
         listView.choiceMode = ListView.CHOICE_MODE_MULTIPLE
 
         val selectedPackages = prefs.getBlockedPackages()
-        apps.forEachIndexed { index, app ->
+        apps.forEach { app ->
             if (app.packageName in selectedPackages) {
-                listView.setItemChecked(index, true)
                 app.checked = true
             }
         }
 
-        listView.setOnItemClickListener { _, _, position, _ ->
-            filteredApps[position].checked = !filteredApps[position].checked
-            adapter.notifyDataSetChanged()
-            updateSelectedCount(selectedCount)
-        }
-
         searchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
-
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
-
             override fun afterTextChanged(s: Editable?) {
                 filterApps(s?.toString().orEmpty())
             }
@@ -82,6 +88,7 @@ class AppSelectionActivity : AppCompatActivity() {
 
     private fun loadLaunchableApps(): List<SelectableApp> {
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val myPackageName = packageName
         return packageManager.queryIntentActivities(intent, 0)
             .map {
                 val appInfo = it.activityInfo.applicationInfo
@@ -91,6 +98,7 @@ class AppSelectionActivity : AppCompatActivity() {
                     icon = packageManager.getApplicationIcon(appInfo)
                 )
             }
+            .filter { it.packageName != myPackageName }
             .distinctBy { it.packageName }
             .sortedBy { it.label.lowercase() }
     }
@@ -128,14 +136,13 @@ class AppSelectionActivity : AppCompatActivity() {
     ) : BaseAdapter() {
 
         override fun getCount(): Int = items.size
-
         override fun getItem(position: Int): Any = items[position]
-
         override fun getItemId(position: Int): Long = position.toLong()
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
             val view = convertView ?: LayoutInflater.from(parent.context)
                 .inflate(R.layout.row_app_item, parent, false)
+            
             val card = view.findViewById<MaterialCardView>(R.id.cardRow)
             val icon = view.findViewById<ImageView>(R.id.imageAppIcon)
             val title = view.findViewById<TextView>(R.id.textAppName)
@@ -146,22 +153,23 @@ class AppSelectionActivity : AppCompatActivity() {
             icon.setImageDrawable(item.icon)
             title.text = item.label
             packageText.text = item.packageName
+            
             checkbox.setOnCheckedChangeListener(null)
             checkbox.isChecked = item.checked
+            
+            syncRowCardState(card, item.checked)
+
             checkbox.setOnCheckedChangeListener { _, isChecked ->
                 item.checked = isChecked
                 syncRowCardState(card, isChecked)
                 onSelectionChanged()
             }
 
-            syncRowCardState(card, item.checked)
-
             view.setOnClickListener {
                 item.checked = !item.checked
                 checkbox.isChecked = item.checked
                 syncRowCardState(card, item.checked)
                 onSelectionChanged()
-                notifyDataSetChanged()
             }
 
             return view
@@ -169,19 +177,15 @@ class AppSelectionActivity : AppCompatActivity() {
 
         private fun syncRowCardState(card: MaterialCardView, isChecked: Boolean) {
             val context = card.context
-            val strokeColor = if (isChecked) {
-                context.getColor(R.color.app_primary)
+            if (isChecked) {
+                card.setCardBackgroundColor(context.getColor(R.color.app_primary_container))
+                card.strokeColor = context.getColor(R.color.app_primary)
+                card.strokeWidth = (2 * context.resources.displayMetrics.density).toInt()
             } else {
-                context.getColor(R.color.app_surface_variant)
+                card.setCardBackgroundColor(context.getColor(R.color.app_surface))
+                card.strokeColor = context.getColor(R.color.app_surface_variant)
+                card.strokeWidth = context.resources.displayMetrics.density.toInt()
             }
-            val backgroundColor = if (isChecked) {
-                context.getColor(R.color.app_primary_container)
-            } else {
-                context.getColor(R.color.app_surface_variant)
-            }
-            card.setCardBackgroundColor(backgroundColor)
-            card.strokeColor = strokeColor
-            card.strokeWidth = if (isChecked) (2 * context.resources.displayMetrics.density).toInt() else context.resources.displayMetrics.density.toInt()
         }
     }
 }

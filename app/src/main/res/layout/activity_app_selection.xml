@@ -2,10 +2,11 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootAppSelection"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/app_background"
-    android:padding="16dp"
+    android:padding="20dp"
     tools:context=".AppSelectionActivity">
 
     <com.google.android.material.card.MaterialCardView
@@ -13,8 +14,9 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         app:cardBackgroundColor="@color/app_surface"
-        app:cardCornerRadius="24dp"
-        app:cardElevation="2dp"
+        app:cardCornerRadius="28dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
@@ -22,29 +24,30 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="24dp">
 
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/select_apps_title"
                 android:textAppearance="?attr/textAppearanceHeadlineSmall"
-                android:textColor="@color/app_on_background"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/textSelectedCount"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="8dp"
                 android:text="@string/selected_count_default"
-                android:textColor="@color/app_on_surface_variant" />
+                android:textColor="@color/text_secondary" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="20dp"
                 app:boxBackgroundMode="outline"
                 app:boxStrokeColor="@color/app_primary"
                 app:boxStrokeWidthFocused="2dp"
@@ -52,7 +55,9 @@
                 app:boxCornerRadiusBottomStart="16dp"
                 app:boxCornerRadiusTopEnd="16dp"
                 app:boxCornerRadiusTopStart="16dp"
-                app:startIconDrawable="@android:drawable/ic_menu_search">
+                app:hintEnabled="false"
+                app:startIconDrawable="@android:drawable/ic_menu_search"
+                app:startIconTint="@color/text_secondary">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/searchApps"
@@ -60,8 +65,10 @@
                     android:layout_height="wrap_content"
                     android:hint="@string/search_apps"
                     android:imeOptions="actionSearch"
-                    android:textColor="@color/app_on_background"
-                    android:textColorHint="@color/app_on_surface_variant"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_secondary"
+                    android:padding="16dp"
+                    android:background="@android:color/transparent"
                     android:singleLine="true" />
 
             </com.google.android.material.textfield.TextInputLayout>
@@ -73,10 +80,11 @@
         android:id="@+id/cardPickerList"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="20dp"
         app:cardBackgroundColor="@color/app_surface"
-        app:cardCornerRadius="24dp"
-        app:cardElevation="2dp"
+        app:cardCornerRadius="28dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp"
         app:layout_constraintBottom_toTopOf="@id/buttonSaveBlockedApps"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -88,19 +96,24 @@
             android:layout_height="match_parent"
             android:cacheColorHint="@android:color/transparent"
             android:divider="@android:color/transparent"
-            android:dividerHeight="8dp"
-            android:padding="12dp" />
+            android:dividerHeight="12dp"
+            android:padding="16dp"
+            android:clipToPadding="false"
+            android:scrollbarStyle="outsideOverlay" />
 
     </com.google.android.material.card.MaterialCardView>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/buttonSaveBlockedApps"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_height="60dp"
+        android:layout_marginTop="20dp"
         android:text="@string/save"
+        android:textAllCaps="false"
+        android:textSize="16sp"
+        android:textStyle="bold"
         app:backgroundTint="@color/app_primary"
-        app:cornerRadius="18dp"
+        app:cornerRadius="20dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />

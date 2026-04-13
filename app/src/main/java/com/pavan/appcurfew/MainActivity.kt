@@ -87,9 +87,15 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.accessibility_help, Toast.LENGTH_LONG).show()
         }
 
+        val basePadding = (24 * resources.displayMetrics.density).toInt()
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            v.setPadding(
+                systemBars.left + basePadding,
+                systemBars.top + basePadding,
+                systemBars.right + basePadding,
+                systemBars.bottom + basePadding
+            )
             insets
         }
     }
@@ -101,7 +107,13 @@ class MainActivity : AppCompatActivity() {
         endTimeButton.text = formatMinutes(prefs.getEndMinutes())
         updateSummary()
         renderBlockedApps()
+        updateAccessibilityButtonVisibility()
         showAccessibilityPromptIfNeeded()
+    }
+
+    private fun updateAccessibilityButtonVisibility() {
+        val isEnabled = isAccessibilityServiceEnabled()
+        accessibilityButton.visibility = if (isEnabled) View.GONE else View.VISIBLE
     }
 
     private fun updateSummary() {
@@ -147,14 +159,13 @@ class MainActivity : AppCompatActivity() {
                     text = item.label
                     isCheckable = false
                     isClickable = false
-                    setTextColor(resources.getColor(R.color.app_on_background, theme))
-                    chipBackgroundColor = resources.getColorStateList(R.color.app_primary_container, theme)
-                    chipStrokeColor = resources.getColorStateList(R.color.app_primary, theme)
+                    setTextColor(getColor(R.color.text_primary))
+                    chipBackgroundColor = getColorStateList(R.color.app_primary_container)
+                    chipStrokeColor = getColorStateList(R.color.app_primary)
                     chipStrokeWidth = resources.displayMetrics.density
                     chipIcon = item.icon
                     isChipIconVisible = item.icon != null
                     chipIconTint = null
-                    contentDescription = "${item.label} ${item.packageName}"
                 }
                 blockedAppsGroup.addView(chip)
             }
