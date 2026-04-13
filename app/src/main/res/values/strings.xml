@@ -4,6 +4,7 @@
     <string name="bedtime_description">Block selected apps during your bedtime window while always allowing phone and contacts.</string>
     <string name="enable_blocking">Enable blocking</string>
     <string name="select_blocked_apps">Select blocked apps</string>
+    <string name="select_apps_title">Select apps to block</string>
     <string name="open_accessibility_settings">Open accessibility settings</string>
     <string name="accessibility_help">Enable the Bedtime Blocker accessibility service to enforce blocking.</string>
     <string name="whitelist_summary">%1$d blocked apps selected. Blocking is %2$s.</string>

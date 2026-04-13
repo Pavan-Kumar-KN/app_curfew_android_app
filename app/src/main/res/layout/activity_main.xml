@@ -50,7 +50,7 @@
             android:layout_marginTop="20dp"
             android:text="22:00"
             app:layout_constraintEnd_toStartOf="@id/buttonEndTime"
-            app:layout_constraintHorizontalChainStyle="spread"
+            app:layout_constraintHorizontal_chainStyle="spread"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/switchEnableBlocking"
             app:layout_constraintWidth_percent="0.48" />
