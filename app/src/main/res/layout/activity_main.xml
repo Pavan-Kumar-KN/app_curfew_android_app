@@ -94,9 +94,14 @@
                         android:layout_width="0dp"
                         android:layout_height="60dp"
                         android:layout_weight="1"
-                        android:text="10:00 PM"
+                        android:text="From: 10:00 PM"
                         android:textAllCaps="false"
                         android:textColor="@color/text_primary"
+                        android:textSize="13sp"
+                        android:paddingLeft="4dp"
+                        android:paddingRight="4dp"
+                        android:maxLines="1"
+                        android:ellipsize="end"
                         app:backgroundTint="@color/app_surface_variant"
                         app:cornerRadius="16dp" />
 
@@ -107,13 +112,31 @@
                         android:layout_height="60dp"
                         android:layout_marginStart="12dp"
                         android:layout_weight="1"
-                        android:text="6:00 AM"
+                        android:text="To: 6:00 AM"
                         android:textAllCaps="false"
                         android:textColor="@color/text_primary"
+                        android:textSize="13sp"
+                        android:paddingLeft="4dp"
+                        android:paddingRight="4dp"
+                        android:maxLines="1"
+                        android:ellipsize="end"
                         app:backgroundTint="@color/app_surface_variant"
                         app:cornerRadius="16dp" />
 
                 </LinearLayout>
+
+                <TextView
+                    android:id="@+id/textOverrideStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center"
+                    android:textColor="@color/success"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:visibility="visible"
+                    tools:text="Blocking will be automatically active at 11:30 PM" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/buttonSelectApps"

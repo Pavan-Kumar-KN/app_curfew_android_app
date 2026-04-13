@@ -28,6 +28,9 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
@@ -38,6 +41,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var selectAppsButton: Button
     private lateinit var accessibilityButton: Button
     private lateinit var whitelistSummary: TextView
+    private lateinit var overrideStatusText: TextView
     private lateinit var blockedAppsGroup: ChipGroup
     private lateinit var blockedAppsEmpty: TextView
     
@@ -62,6 +66,7 @@ class MainActivity : AppCompatActivity() {
         selectAppsButton = findViewById(R.id.buttonSelectApps)
         accessibilityButton = findViewById(R.id.buttonAccessibilitySettings)
         whitelistSummary = findViewById(R.id.textWhitelistSummary)
+        overrideStatusText = findViewById(R.id.textOverrideStatus)
         blockedAppsGroup = findViewById(R.id.blockedAppsGroup)
         blockedAppsEmpty = findViewById(R.id.blockedAppsEmpty)
 
@@ -82,7 +87,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        // Use setOnClickListener for the master toggle to intercept clicks before they change the check state
         enableSwitch.setOnClickListener {
             val isCurrentlyChecked = enableSwitch.isChecked
             val wasEnabled = prefs.isBlockingEnabled()
@@ -95,8 +99,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 // Normal toggle behavior
                 if (isCurrentlyChecked && prefs.getPinCode() == null) {
-                    // First time enable: Setup PIN
-                    enableSwitch.isChecked = false // Reset until PIN is set
+                    enableSwitch.isChecked = false
                     showSetupPinDialog {
                         prefs.setBlockingEnabled(true)
                         updateUIState()
@@ -146,12 +149,25 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateUIState() {
         val isEnabled = prefs.isBlockingEnabled()
-        
         enableSwitch.isChecked = isEnabled
-
-        startTimeButton.text = formatMinutes(prefs.getStartMinutes())
-        endTimeButton.text = formatMinutes(prefs.getEndMinutes())
         
+        startTimeButton.text = "From: ${formatMinutes(prefs.getStartMinutes())}"
+        endTimeButton.text = "To: ${formatMinutes(prefs.getEndMinutes())}"
+        
+        if (prefs.isOverrideActive() && prefs.isWithinActiveWindow()) {
+            val endTime = prefs.getOverrideEndTime()
+            if (System.currentTimeMillis() < endTime) {
+                val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+                val timeStr = timeFormat.format(Date(endTime))
+                overrideStatusText.text = "Blocking will be automatically active at $timeStr"
+                overrideStatusText.visibility = View.VISIBLE
+            } else {
+                overrideStatusText.visibility = View.GONE
+            }
+        } else {
+            overrideStatusText.visibility = View.GONE
+        }
+
         val blockedCount = prefs.getBlockedPackages().size
         whitelistSummary.text = getString(
             R.string.whitelist_summary,
@@ -232,9 +248,9 @@ class MainActivity : AppCompatActivity() {
                 countdownText.visibility = View.VISIBLE
                 confirmBtn.isEnabled = false
                 
-                object : CountDownTimer(10000, 1000) {
+                object : CountDownTimer(30000, 1000) {
                     override fun onTick(millisUntilFinished: Long) {
-                        countdownText.text = getString(R.string.wait_seconds, millisUntilFinished / 1000)
+                        countdownText.text = getString(R.string.wait_seconds, (millisUntilFinished / 1000) + 1)
                     }
 
                     override fun onFinish() {
@@ -242,11 +258,12 @@ class MainActivity : AppCompatActivity() {
                         confirmBtn.isEnabled = true
                         confirmBtn.text = getString(R.string.confirm_disable)
                         confirmBtn.setOnClickListener {
+                            // Final Disable Logic: Set override but KEEP master enabled intent
                             prefs.setOverrideActive(true)
                             prefs.setOverrideEndTime(System.currentTimeMillis() + 10 * 60 * 1000)
-                            prefs.setBlockingEnabled(false)
+                            // Do NOT call prefs.setBlockingEnabled(false) here, 
+                            // so it auto-restores when the override expires.
                             updateUIState()
-                            Toast.makeText(this@MainActivity, R.string.override_active_msg, Toast.LENGTH_LONG).show()
                             dialog.dismiss()
                         }
                     }
