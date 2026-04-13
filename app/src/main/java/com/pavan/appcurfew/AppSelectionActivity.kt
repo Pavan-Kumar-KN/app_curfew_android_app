@@ -3,6 +3,8 @@ package com.pavan.appcurfew
 import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,12 +16,14 @@ import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.textfield.TextInputEditText
 
 class AppSelectionActivity : AppCompatActivity() {
 
     private lateinit var prefs: BedtimePrefs
     private lateinit var adapter: AppListAdapter
     private val apps = mutableListOf<SelectableApp>()
+    private val filteredApps = mutableListOf<SelectableApp>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,11 +32,13 @@ class AppSelectionActivity : AppCompatActivity() {
         prefs = BedtimePrefs(this)
         val listView = findViewById<ListView>(R.id.listApps)
         val saveButton = findViewById<Button>(R.id.buttonSaveBlockedApps)
+        val searchInput = findViewById<TextInputEditText>(R.id.searchApps)
 
         title = getString(R.string.select_apps_title)
 
         apps.addAll(loadLaunchableApps())
-        adapter = AppListAdapter(apps)
+        filteredApps.addAll(apps)
+        adapter = AppListAdapter(filteredApps)
         listView.adapter = adapter
         listView.choiceMode = ListView.CHOICE_MODE_MULTIPLE
 
@@ -45,9 +51,19 @@ class AppSelectionActivity : AppCompatActivity() {
         }
 
         listView.setOnItemClickListener { _, _, position, _ ->
-            apps[position].checked = !apps[position].checked
+            filteredApps[position].checked = !filteredApps[position].checked
             adapter.notifyDataSetChanged()
         }
+
+        searchInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+
+            override fun afterTextChanged(s: Editable?) {
+                filterApps(s?.toString().orEmpty())
+            }
+        })
 
         saveButton.setOnClickListener {
             val blocked = apps.filter { it.checked }.mapTo(mutableSetOf()) { it.packageName }
@@ -70,6 +86,21 @@ class AppSelectionActivity : AppCompatActivity() {
             }
             .distinctBy { it.packageName }
             .sortedBy { it.label.lowercase() }
+    }
+
+    private fun filterApps(query: String) {
+        val normalized = query.trim().lowercase()
+        filteredApps.clear()
+        filteredApps.addAll(
+            if (normalized.isEmpty()) {
+                apps
+            } else {
+                apps.filter {
+                    it.label.lowercase().contains(normalized) || it.packageName.lowercase().contains(normalized)
+                }
+            }
+        )
+        adapter.notifyDataSetChanged()
     }
 
     private data class SelectableApp(

@@ -7,9 +7,13 @@
     <string name="select_apps_title">Select apps to block</string>
     <string name="open_accessibility_settings">Open accessibility settings</string>
     <string name="accessibility_help">Enable the Bedtime Blocker accessibility service to enforce blocking.</string>
+    <string name="enable_accessibility_title">Allow accessibility access</string>
+    <string name="enable_accessibility_message">AppCurfew needs the accessibility service turned on to detect blocked apps and send you back home when bedtime mode is active.</string>
+    <string name="not_now">Not now</string>
     <string name="whitelist_summary">%1$d blocked apps selected. Blocking is %2$s.</string>
     <string name="enabled">enabled</string>
     <string name="disabled">disabled</string>
     <string name="selected_apps_saved">Blocked apps saved</string>
     <string name="save">Save</string>
+    <string name="search_apps">Search apps</string>
 </resources>

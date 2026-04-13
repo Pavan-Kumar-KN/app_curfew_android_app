@@ -1,14 +1,17 @@
 package com.pavan.appcurfew
 
 import android.app.TimePickerDialog
+import android.content.ComponentName
 import android.content.Intent
-import android.os.Bundle
+import android.content.pm.PackageManager
 import android.provider.Settings
+import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -22,6 +25,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var selectAppsButton: Button
     private lateinit var accessibilityButton: Button
     private lateinit var whitelistSummary: TextView
+    private var accessibilityPromptShown = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,6 +88,7 @@ class MainActivity : AppCompatActivity() {
         startTimeButton.text = formatMinutes(prefs.getStartMinutes())
         endTimeButton.text = formatMinutes(prefs.getEndMinutes())
         updateSummary()
+        showAccessibilityPromptIfNeeded()
     }
 
     private fun updateSummary() {
@@ -107,5 +112,42 @@ class MainActivity : AppCompatActivity() {
 
     private fun formatMinutes(minutesOfDay: Int): String {
         return String.format("%02d:%02d", minutesOfDay / 60, minutesOfDay % 60)
+    }
+
+    private fun showAccessibilityPromptIfNeeded() {
+        if (accessibilityPromptShown || isAccessibilityServiceEnabled()) {
+            return
+        }
+
+        accessibilityPromptShown = true
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.enable_accessibility_title)
+            .setMessage(R.string.enable_accessibility_message)
+            .setCancelable(false)
+            .setPositiveButton(R.string.open_accessibility_settings) { _, _ ->
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }
+            .setNegativeButton(R.string.not_now) { dialog, _ -> dialog.dismiss() }
+            .show()
+    }
+
+    private fun isAccessibilityServiceEnabled(): Boolean {
+        val expected = ComponentName(this, AppBlockAccessibilityService::class.java)
+            .flattenToString()
+        val enabledServices = Settings.Secure.getString(
+            contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ).orEmpty()
+
+        if (enabledServices.split(':').any { it.equals(expected, ignoreCase = true) }) {
+            return true
+        }
+
+        val enabled = Settings.Secure.getInt(
+            contentResolver,
+            Settings.Secure.ACCESSIBILITY_ENABLED,
+            0
+        )
+        return enabled == 1 && enabledServices.contains(expected)
     }
 }
